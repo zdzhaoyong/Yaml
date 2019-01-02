@@ -21,6 +21,7 @@ public:
         std::smatch captures;
         bool ignore=false;
         int indents = 0, lastIndents = 0,indentAmount = -1;
+        std::list<std::string> indents_stack;
         stringpair  token;
         std::list<stringpair> stack;
         while (str.length()) {
@@ -36,38 +37,32 @@ public:
                     }
                     else if(type=="indent")
                     {
-                        lastIndents = indents;
-                        // determine the indentation amount from the first indent
-                        if (indentAmount == -1) {
-                            indentAmount = token.second.length();
+                        if(indents_stack.empty()){
+                            indents_stack.push_back(token.second);
+                            stack.push_back(token);
                         }
-
-                        indents = token.second.length() / indentAmount;
-                        if (indents == lastIndents)
-                            ignore = true;
-                        else if (indents > lastIndents + 1)
-                            throw -1;
-                        else if (indents < lastIndents) {
-                            //                      input = token.second.input
+                        if(token.second==indents_stack.back())
+                            token.first = "";
+                        else if(token.second.length()>indents_stack.back().length())
+                            indents_stack.push_back(token.second);
+                        else{
                             token.first = "dedent";
-                            //                      token.input = input;
-                            while (--lastIndents > indents)
+                            while(token.second.length()<indents_stack.back().length()
+                                  &&!indents_stack.empty()){
+                                indents_stack.pop_back();
                                 stack.push_back(token);
+                            }
+                            token.first.clear();
                         }
                     }
                     break;
                 }
-            if (!ignore){
-                if (token.first.size()){
-                    stack.push_back(token);
-                    std::cout<<"push_back:"<<token.first<<","
-                            <<token.second<<std::endl;
-                    token.first="";
-                }
-                else
-                    throw str;
+            if (token.first.size()){
+                stack.push_back(token);
+                std::cout<<"push_back:"<<token.first<<","
+                        <<token.second<<std::endl;
+                token.first="";
             }
-            ignore = false;
         }
         return stack;
     }
